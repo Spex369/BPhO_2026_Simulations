@@ -36,9 +36,9 @@ while True:
     mousePos = pygame.mouse.get_pos()
 
     for event in pygame.event.get():
-            if pygame.key.get_pressed()[pygame.K_ESCAPE] or event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+        if pygame.key.get_pressed()[pygame.K_ESCAPE] or event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
     # Operations (calculate current pos, current velocity and time since start)
     p = p + (v ** dt) + (0.5 * a * (dt ** 2))
@@ -59,6 +59,7 @@ while True:
     if WINDOW_WIDTH//2 - 2*(time+50) > 0: # if WINDOW_WIDTH//2 - 2*time is 0 or less, the pos over time line will exceed the boundaries of the screen. -100 for good measure, so -2(time+50) = -2*time - 100.
         pygame.draw.line(trackingScreen, "white", (PosOverTimeLeft + 2*time , p + 15), (PosOverTimeLeft + 2*(time+1), nextPos + 15), 3)
         xTracker = PosOverTimeLeft + 2*(time+1)
+
     pygame.draw.line(screen, "white", (xTracker, WINDOW_HEIGHT//30), (xTracker, WINDOW_HEIGHT//30 + 10), 3)
     drawText("pos(x) = " + str(xTracker), font, ((xTracker), 2*WINDOW_HEIGHT//30), False)
     drawText("time = " +str(time), font, ((xTracker), 3*WINDOW_HEIGHT//30), False)
