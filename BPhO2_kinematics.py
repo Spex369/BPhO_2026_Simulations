@@ -2,7 +2,7 @@ import pygame
 import sys
 
 pygame.init()
-(WINDOW_WIDTH, WINDOW_HEIGHT) = 900, 600
+(WINDOW_WIDTH, WINDOW_HEIGHT) = 500, 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 trackingScreen = pygame.surface.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
 clock = pygame.time.Clock()
@@ -10,7 +10,7 @@ clock = pygame.time.Clock()
 p = WINDOW_HEIGHT//5
 a = 1
 v = 0
-C = 0.3
+C = 0.5
 T = 2 * (((2 * (250))/a) ** (1/2))*(1/(1-C + 0.00001) - 0.5) # Expected time until no bounces. 2 * (2 * times OG height over g) * (1 over 1-C -0.5) infinit series for Time, giving total bounce time
 
 bounce = 1
@@ -20,7 +20,6 @@ BoxHeight = 8*WINDOW_HEIGHT//12
 BoxStart = WINDOW_HEIGHT//6
 PosOverTimeLeft = WINDOW_WIDTH//2
 PosOverTimeBottom = BoxHeight + BoxStart
-
 
 font = pygame.font.SysFont("arial", 14)
 
@@ -61,8 +60,10 @@ while True:
         pygame.draw.line(trackingScreen, "white", (PosOverTimeLeft + 2*time , p + 15), (PosOverTimeLeft + 2*(time+1), nextPos + 15), 3)
         xTracker = PosOverTimeLeft + 2*(time+1)
     pygame.draw.line(screen, "white", (xTracker, WINDOW_HEIGHT//30), (xTracker, WINDOW_HEIGHT//30 + 10), 3)
-    drawText(str(xTracker), font, ((xTracker), 2*WINDOW_HEIGHT//30), False)
-    drawText(str(time), font, ((xTracker), 3*WINDOW_HEIGHT//30), False)
+    drawText("pos(x) = " + str(xTracker), font, ((xTracker), 2*WINDOW_HEIGHT//30), False)
+    drawText("time = " +str(time), font, ((xTracker), 3*WINDOW_HEIGHT//30), False)
+    drawText("Velocity = " + str(v), font, (10,10), False)
+    drawText("Acc. = " + str(a), font, (10,25), False)
     
 
     for i in range(BoxHeight//50 + 1):
