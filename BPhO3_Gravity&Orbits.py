@@ -3,7 +3,7 @@ import sys
 import math
 
 pygame.init()
-(WINDOW_WIDTH, WINDOW_HEIGHT) = 500, 500
+(WINDOW_WIDTH, WINDOW_HEIGHT) = 600, 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 ellipseScreen = pygame.surface.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
 clock = pygame.time.Clock()
@@ -22,41 +22,51 @@ class planet:
         self.e = epsilon
         self.a = majorA
         self.colour = colour
-        self.Period = ((4*(math.pi**2)*(self.a**3))/(G*(self.mass+SUN[0])))**1/2 # Years?
-        self.angularV = (2*math.pi)/self.Period
+        self.Period = (((4*(math.pi**2)*(self.a**3))/(G*(self.mass+SUN[0])))**(1/2)) # Years
+        self.angularV = ((2*math.pi)/self.Period)
         
     def r(self, theta):
         return (self.a * (1 - self.e**2)) / (1 - self.e*math.cos(theta))
 
 # Variables ---------------------------------------------------------------------------
-planets = {"Mercury" : planet(0.33, 0.206, 0.387, (162,211, 38)), "Venus" : planet(4.87, 0.0067, 0.723, (211,46,57)), "Earth" : planet(5.97, 0.0167, 1, (135,177,211))} # {"Name" : planetObject} # Three planets for the moment # later adding the ability to add planets maybe?? For the moment built-in planets
+planets = {"Mercury" : planet(0.33, 0.206, 0.387, (162, 211, 38)), "Venus" : planet(4.87, 0.67, 0.723, (211,46,57)), "Earth" : planet(5.97, 0.0167, 1, (135,177,211))} # {"Name" : planetObject} # Three planets for the moment # later adding the ability to add planets maybe?? For the moment built-in planets
 time = 0
-dt = 1
 # 1 year = time for earth to perform 1 orbit.
 # What is theta for 1 frame?- angularV.
 # Number of orbits in 1 frame? angularV/(2*pi).
 # How many frames for 1 orbit? 1 frame/(angularV/(2*pi))
 # Hence (2*pi)/angularV = interval of 1 year.
-# Frames after 1 year = (2*pi)/(4.2229121604103004e+19)
-framesAfterYear = (2*math.pi)/(4.2229121604103004e+19)
-dt = framesAfterYear/1000
+# Frames after 1 year = (2*pi)/(11518103064.263664)
+framesAfterYear = ((2*math.pi)/(11518103064.263664))
+dt = framesAfterYear/1000 # sped up by SF 10 a bit
+font = pygame.font.SysFont("arial", 14)
 
-for i in planets: # largest semi major axis
+for i in planets: # largest semi major axis and semi minor axis
+    b_squared = (1 - (planets.get(i).e**2))*(planets.get(i).a**2)
     largest = 0
-    largest = max(planets.get(i).a, largest)
 
-# We want the largest orbit to cover 4/8 of the screen, AU in pixels is the radius, 1/2 of 4/8 is 2/8.
-auInPixels = (2*WINDOW_WIDTH//8)/largest
-    
+    if (b_squared+planets.get(i).a**2)**(1/2)>largest:
+        largest = (b_squared+planets.get(i).a**2)**(1/2)
+        largestOrbitPLanet = i
 
-# Ellipses -------------------------------------------------------------------------
+# We want the largest orbit to cover 2/3 of the screen, AU in pixels is the radius,so 1/2 of 2/3 is 2/6.
+# Here we are making related to both width and height by using pythag
+auInPixels = (((WINDOW_WIDTH**2+WINDOW_HEIGHT**2)**(1/2))/3)/(largest)
+graphSize = (planets.get(largestOrbitPLanet).a*2, b_squared**(1/2)*2) # length and width of graph is 2a and 2b respectively. Staying consistent even if not multiplying is a shortcut.
 
-for i in planets:
+# Ellipses ----------------------------------------------------------------------------
+
+for i in planets: # drawing ellipses once
     colour = planets.get(i).colour
     for j in range(360):
         r = planets.get(i).r(math.radians(j)) * auInPixels
         nextR = planets.get(i).r(math.radians(j+1)) * auInPixels
         pygame.draw.line(ellipseScreen, colour, (SUN[1][0] - r*math.cos(math.radians(j)), SUN[1][1] - r*math.sin(math.radians(j))), (SUN[1][0] - r*math.cos(math.radians(j+1)), SUN[1][1] - r*math.sin(math.radians(j+1))), 3)
+
+# Subprograms -------------------------------------------------------------------------
+def drawText(text, font, colour, pos):
+    screen.blit(font.render(text, True, colour), pos)
+
 # Main --------------------------------------------------------------------------------
 
 while True:
@@ -64,7 +74,8 @@ while True:
     screen.blit(ellipseScreen, (0,0))
     time += dt
 
-    print("t = " + str(time/(1000*dt)) + " Years")
+    drawText(f"Time = {(time/(1000*dt)):.2f} years", font, "white", (4*WINDOW_WIDTH//10, WINDOW_HEIGHT//10)) # sped up by SF 10 a bit
+
     for event in pygame.event.get():
         if pygame.key.get_pressed()[pygame.K_ESCAPE] or event.type == pygame.QUIT:
             pygame.quit()
@@ -75,8 +86,10 @@ while True:
     for i in planets:
         theta = planets.get(i).angularV * time
         r = planets.get(i).r(theta) * auInPixels
+        drawText(f"w = {planets.get(i).a}", font, planets.get(i).colour, (SUN[1][0] - r*math.cos(theta) + 10, SUN[1][1] - r*math.sin(theta) + 15)) # sped up by SF 10 a bit
         pygame.draw.circle(screen, planets.get(i).colour, (SUN[1][0] - r*math.cos(theta), SUN[1][1] - r*math.sin(theta)), 5)
 
+    pygame.draw.rect(screen, "white", pygame.rect.Rect(SUN[1][0]-graphSize[0]*auInPixels//2, SUN[1][1]-graphSize[1]*auInPixels//2, graphSize[0]*auInPixels, graphSize[1]*auInPixels), 1) # graph size is in AU.
     pygame.display.update()
     clock.tick(50) # smooth and CPU friendly. DO NOT MODIFY.
 
@@ -85,3 +98,4 @@ while True:
 # LATER ADDITIONS
 #   • Add more planets/ customizeable planet addition
 #   • Axis and making the system fit on the screen dynamically
+#   • Hovering over ellipses shows information about orbit in question
