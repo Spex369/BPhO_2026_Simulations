@@ -81,4 +81,3 @@ while True:
     
     pygame.display.update()
     clock.tick(50) # smooth and CPU friendly. DO NOT MODIFY.
-
