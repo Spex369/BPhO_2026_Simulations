@@ -7,38 +7,39 @@ pygame.init()
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 ellipseScreen = pygame.surface.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
 clock = pygame.time.Clock()
-ellipseScreen.set_alpha(150)
+ellipseScreen.set_alpha(100)
 
 # Masses are given in 1*10^24 kg.
 
 # Constants -------------------------------------------------------------------------
-SUN = (1.989*(10**30), (WINDOW_WIDTH//2, WINDOW_HEIGHT//2)) # Mass, pos.
-G = 6.67*(10**-11) # Uni. Gravitational C. All is given in 1*10^24 so divided by 10^24.
+SUN = (1000, (WINDOW_WIDTH//2, WINDOW_HEIGHT//2)) # Mass, pos.
+sunVectorPos = pygame.Vector2(SUN[1])
+G = 1 # Uni. Gravitational C.
 
 # Classes ---------------------------------------------------------------------------
 class planet:
-    def __init__(self, m, epsilon, majorA, colour): # epsilon = eccentricity, majorA = semi major axis in AU.
+    def __init__(self, m, epsilon, majorA, colour): # We'll start at aphelion, so r(pixels) = semi major axis(AU) * auInPixels.
         self.mass = m * (10**24)
         self.e = epsilon
         self.a = majorA
+        self.pos = pygame.Vector2(self.a, 0) # testing with AU and then drawing in pixels
+
+        # force = (G*m*M)/r^2
+        # force * distance(r) / mass(m) = velocity
+        # velocity = (G*M)/r
+        # controlled using eccentricity using coefficient, k
+        # k = (1-e)**(1/2)
+        v_circular = math.sqrt(G * SUN[0] / self.a)
+        k = math.sqrt(1 - epsilon)
+        self.vel = pygame.Vector2(0, -k * v_circular)
         self.colour = colour
-        self.Period = (((4*(math.pi**2)*(self.a**3))/(G*(self.mass+SUN[0])))**(1/2)) # Years
-        self.angularV = ((2*math.pi)/self.Period)
-        
-    def r(self, theta):
-        return (self.a * (1 - self.e**2)) / (1 - self.e*math.cos(theta))
 
 # Variables ---------------------------------------------------------------------------
 planets = {"Mercury" : planet(0.33, 0.206, 0.387, (162, 211, 38)), "Venus" : planet(4.87, 0.67, 0.723, (211,46,57)), "Earth" : planet(5.97, 0.0167, 1, (135,177,211))} # {"Name" : planetObject} # Three planets for the moment # later adding the ability to add planets maybe?? For the moment built-in planets
 time = 0
-# 1 year = time for earth to perform 1 orbit.
-# What is theta for 1 frame?- angularV.
-# Number of orbits in 1 frame? angularV/(2*pi).
-# How many frames for 1 orbit? 1 frame/(angularV/(2*pi))
-# Hence (2*pi)/angularV = interval of 1 year.
-# Frames after 1 year = (2*pi)/(11518103064.263664)
-framesAfterYear = ((2*math.pi)/(11518103064.263664))
-dt = framesAfterYear/1000 # sped up by SF 10 a bit
+dt = 0.001
+
+# Have to fix this later, because now we use force of gravity to find position
 font = pygame.font.SysFont("arial", 14)
 
 for i in planets: # largest semi major axis and semi minor axis
@@ -56,12 +57,12 @@ graphSize = (planets.get(largestOrbitPLanet).a*2, b_squared**(1/2)*2) # length a
 
 # Ellipses ----------------------------------------------------------------------------
 
-for i in planets: # drawing ellipses once
-    colour = planets.get(i).colour
-    for j in range(360):
-        r = planets.get(i).r(math.radians(j)) * auInPixels
-        nextR = planets.get(i).r(math.radians(j+1)) * auInPixels
-        pygame.draw.line(ellipseScreen, colour, (SUN[1][0] - r*math.cos(math.radians(j)), SUN[1][1] - r*math.sin(math.radians(j))), (SUN[1][0] - r*math.cos(math.radians(j+1)), SUN[1][1] - r*math.sin(math.radians(j+1))), 3)
+#for i in planets: # drawing ellipses once
+#    colour = planets.get(i).colour
+#    for j in range(360):
+#        r = planets.get(i).r(math.radians(j)) * auInPixels
+#        nextR = planets.get(i).r(math.radians(j+1)) * auInPixels
+#        pygame.draw.line(ellipseScreen, colour, (SUN[1][0] - r*math.cos(math.radians(j)), SUN[1][1] - r*math.sin(math.radians(j))), (SUN[1][0] - r*math.cos(math.radians(j+1)), SUN[1][1] - r*math.sin(math.radians(j+1))), 3)
 
 # Subprograms -------------------------------------------------------------------------
 def drawText(text, font, colour, pos):
@@ -72,9 +73,6 @@ def drawText(text, font, colour, pos):
 while True:
     screen.fill("black")
     screen.blit(ellipseScreen, (0,0))
-    time += dt
-
-    drawText(f"Time = {(time/(1000*dt)):.2f} years", font, "white", (4*WINDOW_WIDTH//10, WINDOW_HEIGHT//10)) # sped up by SF 10 a bit
 
     for event in pygame.event.get():
         if pygame.key.get_pressed()[pygame.K_ESCAPE] or event.type == pygame.QUIT:
@@ -83,15 +81,31 @@ while True:
 
     pygame.draw.circle(screen, "red", (SUN[1][0], SUN[1][1]), 10)
 
+    print(planets.get("Mercury").a)
+    print(planets.get("Venus").a)
+    print(planets.get("Earth").a)
+    print("1 au = ", f"{auInPixels:.2f}", " pixels")
     for i in planets:
-        theta = planets.get(i).angularV * time
-        r = planets.get(i).r(theta) * auInPixels
-        drawText(f"w = {planets.get(i).a}", font, planets.get(i).colour, (SUN[1][0] - r*math.cos(theta) + 10, SUN[1][1] - r*math.sin(theta) + 15)) # sped up by SF 10 a bit
-        pygame.draw.circle(screen, planets.get(i).colour, (SUN[1][0] - r*math.cos(theta), SUN[1][1] - r*math.sin(theta)), 5)
+        print("true pos = ", planets.get(i).pos)
+        # every frame we increase the velocity in the direction of the sun by the force due to gravity multiplied by the mass of the planet (acceleration)
+        # every frame we add said velocity to the planet's position vectors.
+
+        planetToStarVector = - planets.get(i).pos
+        r = planetToStarVector.length()
+        rDirection = planetToStarVector.normalize()
+
+        accelerationDirection = (((1000) / (r ** 2)) * rDirection)
+        planets.get(i).vel += accelerationDirection * dt
+        planets.get(i).pos += planets.get(i).vel * dt
+        x = SUN[1][0] + planets.get(i).pos.x * auInPixels
+        y = SUN[1][1] + planets.get(i).pos.y * auInPixels
+
+        pygame.draw.circle(screen, planets.get(i).colour, (x, y), 5)
+        pygame.draw.circle(ellipseScreen, planets.get(i).colour, (x, y), 1)
 
     pygame.draw.rect(screen, "white", pygame.rect.Rect(SUN[1][0]-graphSize[0]*auInPixels//2, SUN[1][1]-graphSize[1]*auInPixels//2, graphSize[0]*auInPixels, graphSize[1]*auInPixels), 1) # graph size is in AU.
     pygame.display.update()
-    clock.tick(50) # smooth and CPU friendly. DO NOT MODIFY.
+    clock.tick(50)
 
 
 
@@ -99,3 +113,11 @@ while True:
 #   • Add more planets/ customizeable planet addition
 #   • Axis and making the system fit on the screen dynamically
 #   • Hovering over ellipses shows information about orbit in question
+
+
+# I didn't know whether to use Force or dA/dT, so I'm going to do both in time as practice for intuition.
+# This one is going to be Force. I had to use Ai for this, but no vibe coding. Just questions asked in order to understand the physics behind it all.
+
+# I learned how to use pygame vectors today!! Thanks GPT, sir!
+# No longer using polar coords, because the position no longer needs to be related to the sun. Now the position changes in relation to the sun using vectors, so no worries about that.
+# I even get apsidal precession!!
