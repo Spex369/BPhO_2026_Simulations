@@ -155,6 +155,4 @@ while True:
 
 
 # LATER ADDITIONS
-#   • Add more planets/ customizeable planet addition
-#   • Axis and making the system fit on the screen dynamically
 #   • Hovering over ellipses shows information about orbit in question
