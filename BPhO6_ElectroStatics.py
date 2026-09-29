@@ -5,19 +5,31 @@ import math
 
 pygame.init()
 
+COULOMB = 8.99 # all charges are given in nano coulombs
 WINDOW_DIMENS = 640
+
 screen = pygame.display.set_mode((WINDOW_DIMENS, WINDOW_DIMENS))
 clock = pygame.time.Clock()
 
 charges = []
 pressed = False
-COULOMB = 8.99 # all charges are given in nano coulombs
 text = pygame.font.SysFont("arial", 10)
 
 class pointCharge:
     def __init__(self, pos : tuple, charge : int): # all point charges will have radius of 0.
         self.pos = pos
         self.Q = charge
+
+def fieldStrength (pos : tuple, pCharges : list[pointCharge], maxDist): # checks every tile and calculates the electric field strength experienced by the tile at pos.
+    totalE = 0
+    for charge in pCharges:
+        deltaX = (pos[0] - charge.pos[0])/250 #
+        deltaY = (pos[1] - charge.pos[1])/250
+        r_squared = deltaX**2 + deltaY**2
+
+        distance = min(maxDist, r_squared) 
+        totalE += int((charge.Q/distance))
+    return max(min(totalE, 99), -99)
 
 def forces(pCharges : list[pointCharge], thisCharge): # generates an arrow to all charges.
     for charge in pCharges:
@@ -43,6 +55,22 @@ def drawArrow(pos : tuple, color, lineAngle : float, direct):
     pygame.draw.line(screen, color, pos, first_branch_end_pos)
     pygame.draw.line(screen, color, pos, second_branch_end_pos)
 
+def fieldColorScale(res : int, dimensions): # seperates the screen in a series of tiles, according to the desired resolution of field and the size of the window. The center of each tile is the pixel whose electric field strength represents the tile's.
+    tileSize = dimensions/(res**(1/2)) # res is the total num of tiles. The screen is a square, so res^1/2 = how many tiles per line. (Length of line)/(tiles per line) = length of one tile.
+    electricFieldStrength = 0
+        
+    for line in range(int(res**(1/2))):
+        for tile in range(int(res**(1/2))):
+
+            centerPos = (tile*tileSize + tileSize//2, line*tileSize + tileSize//2) # center pos = tileSize/2 + (number of tiles before it in the X or in the Y)
+            electricFieldStrength = fieldStrength(centerPos, charges, 5)
+
+
+            #color = pygame.Color.lerp(pygame.Color(0, 0, 255, 20), pygame.Color(255, 0, 0, 20), tile/int(res**(1/2))) # interpolate between two colours, where the normal value (0 to 1) is (the tile number in the x * the length of one tile) divided by (the total length in the x).
+            color = pygame.Color.lerp(pygame.Color(0, 0, 255), pygame.Color(255, 0, 0), max(min((electricFieldStrength+50), 99), 1)/100) # interpolate between two colours, where the normal value (0 to 1) is the electric potential divided by the scale maximum.
+            tileRect = pygame.rect.Rect(tile*tileSize, line*tileSize, tileSize, tileSize)
+            pygame.draw.rect(screen, color, tileRect)
+
 while True:
     screen.fill("black")
 
@@ -55,17 +83,21 @@ while True:
         elif event.type == pygame.MOUSEBUTTONUP:
             pressed = False
 
+    fieldColorScale(25600, WINDOW_DIMENS)
 
     for i in charges: # checks each charge
         if i.Q > 0:
-            color = "red"
+            if (i.pos[0] + 2 >= pygame.mouse.get_pos()[0] >= i.pos[0] - 2) and (i.pos[1] + 2 >= pygame.mouse.get_pos()[1] >= i.pos[1] - 2):
+                forces(charges, i)
+                drawText(f"Charge = {i.Q} nC", text, "green", (10, 10)) # Draws text for charge in top left
+                pygame.draw.circle(screen, "black", i.pos, 7)
+            color = "white"
         elif i.Q < 0:
-            color = "blue"
-
-        if (i.pos[0] + 2 >= pygame.mouse.get_pos()[0] >= i.pos[0] - 2) and (i.pos[1] + 2 >= pygame.mouse.get_pos()[1] >= i.pos[1] - 2):
-            forces(charges, i)
-            drawText(f"Charge = {i.Q} nC", text, "green", (10, 10)) # Draws text for charge in top left
-            pygame.draw.circle(screen, "white", i.pos, 5)
+            if (i.pos[0] + 2 >= pygame.mouse.get_pos()[0] >= i.pos[0] - 2) and (i.pos[1] + 2 >= pygame.mouse.get_pos()[1] >= i.pos[1] - 2):
+                forces(charges, i)
+                drawText(f"Charge = {i.Q} nC", text, "green", (10, 10)) # Draws text for charge in top left
+                pygame.draw.circle(screen, "white", i.pos, 5)
+            color = "black"
 
 
         pygame.draw.circle(screen, color, i.pos, 4)
