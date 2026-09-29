@@ -5,8 +5,8 @@ import math
 
 pygame.init()
 
-WINDOW_WIDTH, WINDOW_HEIGHT = 640, 640
-screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+WINDOW_DIMENS = 640
+screen = pygame.display.set_mode((WINDOW_DIMENS, WINDOW_DIMENS))
 clock = pygame.time.Clock()
 
 charges = []
@@ -28,12 +28,20 @@ def forces(pCharges : list[pointCharge], thisCharge): # generates an arrow to al
 
             pygame.draw.line(screen, (90, 90, 90), thisCharge.pos, charge.pos) # line to charge
             drawText(f"{force:.2e} N", text, "green", midPoint) # gets the midpoint of the line and draws the text for force there. +ive F means repulsion.
+            drawArrow(midPoint, (90, 90, 90), math.atan2((thisCharge.pos[1] - charge.pos[1]), (thisCharge.pos[0] - charge.pos[0])), ((force**2)**(1/2))/force) # lineAngle : finds the angle of the line to the horizontal (-pi to pi radians), direct : sign of force decides if arrow points towards or away.
 
 def createCharge(pos : tuple, charge : int):
     charges.append(pointCharge(pos, charge))
 
 def drawText(text, font, colour, pos):
     screen.blit(font.render(text, True, colour), pos)
+
+def drawArrow(pos : tuple, color, lineAngle : float, direct):
+    angleFromLine = math.pi/9 # radians
+    first_branch_end_pos = (direct * 30*math.cos(lineAngle + angleFromLine) + pos[0], direct * 30*math.sin(lineAngle + angleFromLine) + pos[1])
+    second_branch_end_pos = (direct * 30*math.cos(lineAngle - angleFromLine) + pos[0], direct * 30*math.sin(lineAngle - angleFromLine) + pos[1])
+    pygame.draw.line(screen, color, pos, first_branch_end_pos)
+    pygame.draw.line(screen, color, pos, second_branch_end_pos)
 
 while True:
     screen.fill("black")
@@ -47,6 +55,7 @@ while True:
         elif event.type == pygame.MOUSEBUTTONUP:
             pressed = False
 
+
     for i in charges: # checks each charge
         if i.Q > 0:
             color = "red"
@@ -58,8 +67,8 @@ while True:
             drawText(f"Charge = {i.Q} nC", text, "green", (10, 10)) # Draws text for charge in top left
             pygame.draw.circle(screen, "white", i.pos, 5)
 
-        pygame.draw.circle(screen, color, i.pos, 4)
 
+        pygame.draw.circle(screen, color, i.pos, 4)
 
 
     pygame.display.update()
