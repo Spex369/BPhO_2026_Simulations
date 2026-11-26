@@ -47,8 +47,9 @@ class simulate:
 
     def fieldStrength (self, pos : tuple, pCharges : list[pointCharge], maxDist): # checks every tile and calculates the electric field strength experienced by the tile at pos.
         totalE = 0
+        vector = [0, 0]
         for charge in pCharges:
-            deltaX = (pos[0] - charge.pos[0])/250 #
+            deltaX = (pos[0] - charge.pos[0])/250
             deltaY = (pos[1] - charge.pos[1])/250
             r_squared = deltaX**2 + deltaY**2
 
@@ -56,7 +57,13 @@ class simulate:
             if distance == 0:
                 break
             totalE += int((charge.Q/distance))
-        return max(min(totalE, 99), -99)
+
+            if charge.pos != pos:
+            # Finding direction of force at each point ----------------
+                    vector += pygame.math.Vector2(deltaX, -deltaY)*(abs(charge.Q)/charge.Q)/distance
+            # ---------------------------------------------------------
+
+        return [max(min(totalE, 99), -99), pygame.math.Vector2(vector)] #[mag, normalized vector direction]
 
     def forces(self, pCharges : list[pointCharge], thisCharge): # generates an arrow to all charges.
         for charge in pCharges:
@@ -67,17 +74,17 @@ class simulate:
 
                 pygame.draw.line(screen, (90, 90, 90), thisCharge.pos, charge.pos) # line to charge
                 drawText(f"{force:.2e} N", text, "green", midPoint) # gets the midpoint of the line and draws the text for force there. +ive F means repulsion.
-                self.drawArrow(midPoint, (90, 90, 90), math.atan2((thisCharge.pos[1] - charge.pos[1]), (thisCharge.pos[0] - charge.pos[0])), ((force**2)**(1/2))/force) # lineAngle : finds the angle of the line to the horizontal (-pi to pi radians), direct : sign of force decides if arrow points towards or away.
+                self.drawArrow(midPoint, (90, 90, 90), math.atan2((thisCharge.pos[1] - charge.pos[1]), (thisCharge.pos[0] - charge.pos[0])), abs(force)/force, 30) # lineAngle : finds the angle of the line to the horizontal (-pi to pi radians), direct : sign of force decides if arrow points towards or away.
 
     def createCharge(self, pos : tuple, charge : int):
         chargesPos = [x.pos for x in self.charges]
         if (((self.pos[0] + self.dimens) >= pos[0] >= self.pos[0]) and (((self.pos[1] + self.dimens) >= pos[1] >= self.pos[1]))) and pos not in chargesPos: # generic  "in the desired simulation space" verification.
             self.charges.append(pointCharge(pos, charge))
 
-    def drawArrow(self, pos : tuple, color, lineAngle : float, direct):
+    def drawArrow(self, pos : tuple, color, lineAngle : float, direct, size):
         angleFromLine = math.pi/9 # radians
-        first_branch_end_pos = (direct * 30*math.cos(lineAngle + angleFromLine) + pos[0], direct * 30*math.sin(lineAngle + angleFromLine) + pos[1])
-        second_branch_end_pos = (direct * 30*math.cos(lineAngle - angleFromLine) + pos[0], direct * 30*math.sin(lineAngle - angleFromLine) + pos[1])
+        first_branch_end_pos = (direct * size*math.cos(lineAngle + angleFromLine) + pos[0], direct * size*math.sin(lineAngle + angleFromLine) + pos[1])
+        second_branch_end_pos = (direct * size*math.cos(lineAngle - angleFromLine) + pos[0], direct * size*math.sin(lineAngle - angleFromLine) + pos[1])
         pygame.draw.line(screen, color, pos, first_branch_end_pos)
         pygame.draw.line(screen, color, pos, second_branch_end_pos)
 
@@ -89,8 +96,10 @@ class simulate:
             for tile in range(int(res**(1/2))):
 
                 centerPos = (tile*tileSize + tileSize//2 + self.pos[0], line*tileSize + tileSize//2 + self.pos[1]) # center pos = tileSize/2 + (number of tiles before it in the X or in the Y) + co-ord of leftmost or highest point.
-                electricFieldStrength = self.fieldStrength(centerPos, self.charges, 5)
-
+                electricField = self.fieldStrength(centerPos, self.charges, 5)
+                electricFieldStrength = electricField[0]
+                if len(self.charges) > 0:
+                    pygame.draw.line(screen, (100, 100, 100, 100), (centerPos[0] - 2.5*math.cos(electricField[1].angle_rad), centerPos[1] + 2.5*math.sin(electricField[1].angle_rad)), (centerPos[0] + 2.5*math.cos(electricField[1].angle_rad), centerPos[1] - 2.5*math.sin(electricField[1].angle_rad)))
 
                 #color = pygame.Color.lerp(pygame.Color(0, 0, 255, 20), pygame.Color(255, 0, 0, 20), tile/int(res**(1/2))) # interpolate between two colours, where the normal value (0 to 1) is (the tile number in the x * the length of one tile) divided by (the total length in the x).
                 color = pygame.Color.lerp(pygame.Color(0, 0, 255), pygame.Color(255, 0, 0), max(min((electricFieldStrength+50), 99), 1)/100) # interpolate between two colours, where the normal value (0 to 1) is the electric potential divided by the scale maximum.
